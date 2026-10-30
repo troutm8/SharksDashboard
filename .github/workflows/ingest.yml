@@ -1,0 +1,61 @@
+name: Ingest data
+
+on:
+  schedule:
+    # Nightly full refresh at 04:17 Pacific (11:17 UTC during PST, 12:17 UTC during PDT; both are quiet hours).
+    - cron: "17 11 * * *"
+    # MoneyPuck updates overnight; pick it up at ~07:40 Pacific.
+    - cron: "40 14 * * *"
+    # Game-day score refresh every 15 minutes from 16:00 Pacific to 23:59 Pacific (23:00-07:59 UTC).
+    - cron: "*/15 23 * * *"
+    - cron: "*/15 0-7 * * *"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Ingest job (teams|schedule|scores|standings|boxscores|roster|stats|odds|advanced|today|nightly|backfill)"
+        default: "nightly"
+      args:
+        description: "Extra CLI flags, e.g. --from 2026-10-01"
+        default: ""
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        run: pnpm db:migrate
+      - name: Pick job
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "job=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT"
+            echo "args=${{ github.event.inputs.args }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "17 11 * * *" ]; then
+            echo "job=nightly" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "40 14 * * *" ]; then
+            echo "job=odds" >> "$GITHUB_OUTPUT"
+            echo "then=advanced" >> "$GITHUB_OUTPUT"
+          else
+            echo "job=today" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run ingest
+        run: pnpm ingest ${{ steps.pick.outputs.job }} ${{ steps.pick.outputs.args }}
+      - name: Second job
+        if: steps.pick.outputs.then != ''
+        run: pnpm ingest ${{ steps.pick.outputs.then }}
