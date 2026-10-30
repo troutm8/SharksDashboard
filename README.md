@@ -1,5 +1,7 @@
 # Sharks 2026-27
 
+Live at https://sharks-dashboard-tawny.vercel.app.
+
 A personal dashboard for the San Jose Sharks' 2026-27 NHL season: the game of the day with
 live score and scoring plays, the schedule and results, league scores, standings and the
 wild-card race, roster and player pages with game logs and shot maps, team stats with league
