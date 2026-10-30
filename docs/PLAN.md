@@ -424,8 +424,22 @@ Deviations from the plan above, and why:
 - **Standings history is a points sparkline, not a position chart.** Position needs the
   wild-card order per day, which is in the snapshots; a chart of it is a small follow-up.
 
-Still to do, in order: create the Neon project and set `DATABASE_URL` as the GitHub secret
-and Vercel variable; first commit and push, connect Vercel to the repository, deploy; run the
-backfill workflow once; the playoff bracket or lottery page by April 10; a standings-position
-chart; the heavy season shot map on `/team` (about 1,300 points, each with a tooltip) could
-drop its tooltips if the page feels slow.
+**2026-10-30, evening.** Deployed.
+
+- **Production is https://sharks-dashboard-tawny.vercel.app**, Vercel project
+  `sharks-dashboard` on the `tomcarroll-6406` account. The plain `sharks-dashboard.vercel.app`
+  hostname was already taken by someone else, hence the `-tawny` suffix; a custom domain
+  would replace it. Functions run in `iad1` (verified: `x-vercel-id` reads `sfo1::iad1::…`).
+- **Neon**: a new project; its pooled connection string is `DATABASE_URL` in `.env` locally
+  (gitignored), as the GitHub Actions secret, and as a Vercel secret for Production and
+  Preview. Migrations applied and the backfill run from the Mac: 378 NHL games, 18 Sharks box
+  scores with 5,875 play-by-play events, 32 days of standings. A backfill against Neon takes
+  about ten minutes versus thirty seconds against PGlite, since every upsert is a round trip
+  to Virginia.
+- **Git integration** connected itself: the Vercel GitHub app installed for the volleyball
+  repository covers the whole `troutm8` account, so pushes to `main` deploy to production.
+- **First CI run passed** on GitHub, smoke tests included, against Neon.
+
+Still to do, in order: the playoff bracket or lottery page by April 10; a standings-position
+chart from the snapshots; drop the tooltips from the season shot map on `/team` if the page
+feels slow (about 1,300 points).
